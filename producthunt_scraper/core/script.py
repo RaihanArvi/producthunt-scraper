@@ -23,6 +23,11 @@ async def scrape_products(browser: nd.Browser, date: datetime) -> List[Product]:
 
     soup = await get_list_of_product_soups(browser, page_url)
     products = await parse_products(soup)
+
+    date_str = date.strftime("%Y-%m-%d")
+    for product in products:
+        product.date = date_str
+
     print(products)
     return products
 
