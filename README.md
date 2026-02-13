@@ -47,3 +47,13 @@ Logs go to `log/scraper_<timestamp>.log` and stdout. Checkpoint file: `checkpoin
 - **`producthunt_scraper/core/json_output.py`** — `JsonOutput`: single JSON file, append and save after each product.
 - **`producthunt_scraper/scraper/base_scraper.py`** — Browser helpers: `get_list_of_product_soups`, `get_single_product_soup`.
 - **`producthunt_scraper/scraper/parser.py`** — Parsers: `parse_products`, `parse_page`, `parse_teams`, `parse_team_page`, `parse_built_with_page`.
+
+## Scraping Process
+
+- `process_date()`: This is the main function wrappers that process all products in a single date.
+- `scrape_products()`: Scrapes all products from a single date leaderboard page. Results in a list of `Product` objects.
+- `scrape_single_product()`: Scrapes a single product page and sends it to BigQuery.
+
+Leaderboard Page -> `script.scrape_products()` -> `base_scraper.get_list_of_product_soups()` -> `parser.parse_products()` -> Products.
+
+Product Page -> `script.scrape_single_product()` -> `base_scraper.get_single_product_soup()` -> `parser.parse_page()` -> Product.
