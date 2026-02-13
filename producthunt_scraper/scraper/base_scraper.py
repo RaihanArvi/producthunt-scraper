@@ -26,7 +26,7 @@ def return_empty_soup(retry_state):
 async def get_list_of_product_soups(browser: nd.Browser, link) -> BeautifulSoup:
     page = None
     try:
-        page = await browser.get(link)
+        page = await browser.get(link, new_tab=True)
 
         # wait until loaded
         await page.wait_for('[data-test="leaderboard-title"]')
@@ -46,6 +46,7 @@ async def get_list_of_product_soups(browser: nd.Browser, link) -> BeautifulSoup:
     finally:
         try:
             if page:
+                pass
                 await page.close()
         except Exception:
             pass
@@ -83,6 +84,7 @@ async def get_single_product_soup(browser: nd.Browser, link, selector) -> Beauti
     finally:
         try:
             if page:
+                pass
                 await page.close()
         except Exception:
             pass
