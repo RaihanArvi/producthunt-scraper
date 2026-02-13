@@ -1,8 +1,19 @@
+"""
+Parse BeautifulSoup into Product Hunt models.
+
+parse_built_with_page — Built With section → list of BuiltWithGroup.
+parse_page — product overview → ProductPage.
+parse_teams — makers section → list of TeamMember.
+parse_team_page — maker about/links → TeamPage.
+parse_products — leaderboard sections → list of Product.
+"""
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin
 from producthunt_scraper.core.model import *
 
+
 async def parse_built_with_page(soup: BeautifulSoup) -> List[BuiltWithGroup]:
+    """Parse Built With details groups into list of BuiltWithGroup (group_name + products)."""
     groups: List[BuiltWithGroup] = []
 
     # Iterate through the groups (details tags)
@@ -65,6 +76,7 @@ async def parse_built_with_page(soup: BeautifulSoup) -> List[BuiltWithGroup]:
 
 
 async def parse_page(soup: BeautifulSoup) -> ProductPage:
+    """Parse product overview soup into ProductPage (name, description, categories, website_link)."""
     try:
         product_name = soup.select_one("h1").text.strip()
 
@@ -99,6 +111,7 @@ async def parse_page(soup: BeautifulSoup) -> ProductPage:
 
 
 async def parse_teams(soup: BeautifulSoup) -> List[TeamMember]:
+    """Parse makers section into list of TeamMember (name, role, href)."""
     try:
         team = []
 
@@ -127,6 +140,7 @@ async def parse_teams(soup: BeautifulSoup) -> List[TeamMember]:
 
 
 async def parse_team_page(soup: BeautifulSoup) -> TeamPage:
+    """Parse maker about/links into TeamPage (about, links)."""
     try:
         about = soup.select_one("#root-container > div.pt-header > div > main > div > div:nth-child(1) > p").text.strip()
 
@@ -151,6 +165,7 @@ async def parse_team_page(soup: BeautifulSoup) -> TeamPage:
 
         team_page = TeamPage(about=about, links=links)
         return team_page
+
     except Exception as e:
         print(f"Error: parse_team_page(): {e}")
         return TeamPage(
@@ -159,6 +174,7 @@ async def parse_team_page(soup: BeautifulSoup) -> TeamPage:
 
 
 async def parse_products(soup: BeautifulSoup) -> List[Product]:
+    """Parse leaderboard post-item sections into list of Product (name, tagline, topics, ph_url; product_page None)."""
     try:
         products = []
 
