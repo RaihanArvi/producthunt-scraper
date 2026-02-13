@@ -196,6 +196,7 @@ async def parse_products(soup: BeautifulSoup) -> List[Product]:
                     topics=[t.get_text(strip=True) for t in topic_els],
                     ph_url=ph_url,
 
+                    date=None,
                     product_page=None,
                 )
             )
