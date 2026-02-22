@@ -6,7 +6,10 @@ async loop (dates → products → BigQuery and optional JSON), and ensures
 graceful shutdown (browser.close on exit or interrupt).
 """
 import os
+import sys
 import asyncio
+import json
+import logging
 import yaml
 from tqdm import tqdm
 from pyvirtualdisplay import Display
@@ -59,14 +62,24 @@ except yaml.YAMLError as e:
 # ----------------------------
 start_str = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
+# Custom handler that uses tqdm.write() to avoid interfering with progress bar
+class TqdmLoggingHandler(logging.Handler):
+    def emit(self, record):
+        try:
+            msg = self.format(record)
+            tqdm.write(msg, file=sys.stderr)
+        except Exception:
+            self.handleError(record)
+
 # Set up logging
 os.makedirs("log", exist_ok=True)
+# Use TqdmLoggingHandler for stderr to avoid conflicts with tqdm
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
         logging.FileHandler(f'log/scraper_{start_str}.log'),
-        logging.StreamHandler()
+        TqdmLoggingHandler()  # Use custom handler instead of StreamHandler
     ]
 )
 logger = logging.getLogger(__name__)
@@ -217,7 +230,20 @@ async def main():
         current_date = start_dt
         total_processed = 0
 
-        with tqdm(desc="Processing dates", unit="date") as pbar:
+        # Calculate initial total number of dates to process
+        initial_total = (today - start_dt).days + 1
+        
+        # Configure tqdm to write to stderr and ensure it's visible
+        with tqdm(
+            desc="Processing dates", 
+            unit="date", 
+            total=initial_total, 
+            initial=0,
+            file=sys.stderr,  # Write to stderr to avoid conflicts with logging
+            disable=False,    # Ensure it's enabled
+            dynamic_ncols=True,  # Adapt to terminal width
+            ascii=False       # Use Unicode for better display
+        ) as pbar:
             while current_date <= today:
 
                 idx = (current_date - base_start).days
@@ -227,7 +253,8 @@ async def main():
 
                 # Save checkpoint after each date processed
                 save_checkpoint(current_date, base_index)
-                logger.info(f"Checkpoint saved: {current_date.date()} ({count} products this date)")
+                # Use tqdm.write() for logging to avoid interfering with progress bar
+                tqdm.write(f"Checkpoint saved: {current_date.date()} ({count} products this date)")
 
                 current_date += timedelta(days=1)
                 pbar.update(1)
@@ -237,7 +264,11 @@ async def main():
                 if new_today > today:
                     extra_days = (new_today - today).days
                     if extra_days > 0:
-                        logger.info(f"Rolling today: {today.date()} -> {new_today.date()} (+{extra_days} day(s))")
+                        tqdm.write(f"Rolling today: {today.date()} -> {new_today.date()} (+{extra_days} day(s))")
+                        # Update progress bar total to reflect new end date
+                        new_total = (new_today - start_dt).days + 1
+                        pbar.total = new_total
+                        pbar.refresh()  # Ensure progress bar updates immediately
                     today = new_today
 
         logger.info(f"Done. Total products sent to BigQuery: {total_processed}")
