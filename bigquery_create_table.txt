@@ -1,0 +1,10 @@
+-- BigQuery DDL: table with two columns only: index (INT64) and product (JSON).
+-- index: 0 = first product at the given start date in the past; increments by 1 per row.
+-- product: full Product JSON (name, tagline, topics, ph_url, date, product_page, etc.).
+-- Replace YOUR_PROJECT, YOUR_DATASET, YOUR_TABLE with your values.
+
+CREATE OR REPLACE TABLE `YOUR_PROJECT.YOUR_DATASET.YOUR_TABLE` (
+  date DATE,
+  index INT64,
+  product JSON
+);
