@@ -1,7 +1,8 @@
 """
-Single JSON file output for scraped products.
+Memory-efficient JSON output for scraped products.
 
-Maintains one JSON array file; appends one product (as JSON) and rewrites the file after each add_product.
+Uses JSONL (JSON Lines) format: one JSON object per line, append-only.
+This avoids loading the entire file into memory and allows efficient appending.
 """
 import json
 import logging
@@ -11,36 +12,47 @@ from producthunt_scraper.core.model import Product
 
 
 class JsonOutput:
-    """Manages a single JSON file for all scraped products. Appends and saves after every product."""
+    """
+    Manages a JSONL file for scraped products. Appends one product per line.
+    Memory-efficient: does not load existing products into memory.
+    """
 
     def __init__(self, filepath: str, logger: logging.Logger):
-        """Initialize with output file path and logger; loads existing file if present."""
+        """
+        Initialize with output file path and logger.
+        Creates file if it doesn't exist; does not load existing data into memory.
+        """
         self.filepath = Path(filepath)
         self.logger = logger
         self._lock = asyncio.Lock()
-        self._products: list[dict] = []
-        self._load_existing()
+        self._file_handle = None
+        self._ensure_file_exists()
 
-    def _load_existing(self) -> None:
-        """Load existing products from file if it exists. On error, start with empty list."""
-        if self.filepath.exists():
+    def _ensure_file_exists(self) -> None:
+        """Ensure the output directory exists and file is ready for appending."""
+        self.filepath.parent.mkdir(parents=True, exist_ok=True)
+        # Just ensure file exists, don't load it
+        if not self.filepath.exists():
+            self.filepath.touch()
+            self.logger.info(f"[JSON] Created new JSONL file: {self.filepath}")
+        else:
+            # Count existing lines to log progress (optional, doesn't load data)
             try:
                 with open(self.filepath, "r", encoding="utf-8") as f:
-                    data = json.load(f)
-                    self._products = data if isinstance(data, list) else []
+                    line_count = sum(1 for _ in f)
+                self.logger.info(f"[JSON] Appending to existing JSONL file: {self.filepath} ({line_count} products)")
             except Exception as e:
-                self.logger.warning(f"[JSON] Could not load existing {self.filepath}: {e}. Starting fresh.")
-                self._products = []
-
-    def _write_file(self) -> None:
-        """Write current _products list to file. Caller must hold _lock."""
-        self.filepath.parent.mkdir(parents=True, exist_ok=True)
-        with open(self.filepath, "w", encoding="utf-8") as f:
-            json.dump(self._products, f, indent=2, ensure_ascii=False)
+                self.logger.warning(f"[JSON] Could not read existing file {self.filepath}: {e}")
 
     async def add_product(self, product: Product) -> None:
-        """Append one product (model_dump mode=json) and rewrite the full file immediately."""
+        """
+        Append one product as a JSON line (JSONL format).
+        Memory-efficient: appends directly to file without loading existing data.
+        """
         async with self._lock:
-            self._products.append(product.model_dump(mode="json"))
-            self._write_file()
+            product_dict = product.model_dump(mode="json")
+            # Append mode: write one JSON object per line
+            with open(self.filepath, "a", encoding="utf-8") as f:
+                json.dump(product_dict, f, ensure_ascii=False)
+                f.write("\n")  # JSONL: one JSON object per line
         self.logger.debug(f"[JSON] Appended product {product.name!r} to {self.filepath}")

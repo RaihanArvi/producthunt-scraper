@@ -14,6 +14,9 @@ class BadHTML(Exception):
     pass
 
 def return_empty_soup(retry_state):
+    """
+    Function to return an empty soup if the request fails. Used for retrying.
+    """
     print(f"Failed after {retry_state.attempt_number} attempts. Returning empty soup.")
     return BeautifulSoup("", "html.parser")
 
@@ -24,6 +27,12 @@ def return_empty_soup(retry_state):
     retry_error_callback=return_empty_soup,
 )
 async def get_list_of_product_soups(browser: nd.Browser, link) -> BeautifulSoup:
+    """
+    This function is used to get the BS4 object of daily leaderboard page for a given date.
+    :param browser: no driver browser object.
+    :param link: the link of the daily leaderboard page for a given date.
+    :return: BS4 object.
+    """
     page = None
     try:
         page = await browser.get(link, new_tab=True)
@@ -60,8 +69,9 @@ async def get_list_of_product_soups(browser: nd.Browser, link) -> BeautifulSoup:
 )
 async def get_single_product_soup(browser: nd.Browser, link, selector) -> BeautifulSoup:
     """
-    :param browser:
-    :param link:
+    This function is used to get the BS4 object of ANY link (despite the name of the function!).
+    :param browser: no driver browser object.
+    :param link: the link of ANY page.
     :param selector: need to pass the selector of the product page for wait_for to work.
     :return: BS4 object.
     """
